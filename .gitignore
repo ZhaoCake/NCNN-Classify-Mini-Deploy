@@ -1,0 +1,4 @@
+data/
+outputs/
+deploy/models/*
+**/__pycache__/
