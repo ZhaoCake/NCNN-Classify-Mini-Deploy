@@ -39,11 +39,11 @@
 ### 2. 模型定义 (`train/model.py`)
 - 支持多种轻量级模型架构：
   - **MobileNetV2**：适合中等复杂度的场景
-  - **MobileNetV3-Small**：比MobileNetV2更轻量，约2.5M参数
-  - **ShuffleNetV2**：高效的轻量级模型，约2.3M参数（1.0x版本）
-  - **SqueezeNet**：超轻量级模型，约1.2M参数
-  - **TinyConvNet**：自定义超轻量级模型，仅约0.1M参数
-  - **MicroNet**：自定义极简模型，仅约0.01M参数，适合微控制器
+  - **MobileNetV3-Small**：比MobileNetV2更轻量
+  - **ShuffleNetV2**：高效的轻量级模型
+  - **SqueezeNet**：超轻量级模型
+  - **TinyConvNet**：自定义超轻量级模型，仅约0.2M参数
+  - **MicroNet**：自定义极简模型，仅约0.01M参数，或许适合微控制器。实际是用来测试的
 - 支持使用ImageNet预训练权重（标准模型）
 - 支持自定义类别数量
 
@@ -144,43 +144,36 @@ pnnx ./outputs/models/model_name_simple.pt inputshape=[1,3,224,224]
 - TorchScript格式模型 (`./outputs/models/model_name_torchscript.pt` 或 `./outputs/models/model_name_simple.pt`)
 - NCNN格式模型 (`./deploy/models/model_name.param` 和 `.bin`)
 
-## 模型参数量比较
+## 模型推理
 
-各轻量级模型的参数量比较（基于CIFAR10的10个类别）：
+模型训练完成并转换为 NCNN 格式后，可以使用以下方法进行推理。
 
-| 模型名称 | 参数量 | 相对大小 | 适用场景 |
-|---------|-------|--------|---------|
-| MobileNetV2 | ~3.5M | 中等 | 平衡的性能和大小 |
-| MobileNetV3-Small | ~2.5M | 小 | 资源受限设备 |
-| ShuffleNetV2 (1.0x) | ~2.3M | 小 | 移动设备应用 |
-| ShuffleNetV2 (0.5x) | ~1.4M | 超小 | 极低资源场景 |
-| SqueezeNet | ~1.2M | 超小 | 极度受限硬件 |
-| TinyConvNet | ~0.1M | 微型 | 嵌入式设备、微控制器 |
-| MicroNet | ~0.01M | 极微型 | 超低功耗微控制器 |
+### Python 推理
 
-## 模型转换流程
+项目提供了简洁的 Python 推理脚本，基于 NCNN Python 绑定实现：
 
-完整的转换流程如下：
+```bash
+# 基本用法
+python deploy/python_inference.py [param_path] [bin_path] [imagepath] [class_names_path(可选)]
 
-1. **PyTorch模型（.pth）** - 训练完成后保存的模型，包含网络结构和权重
-2. **ONNX格式（.onnx）** - 开放神经网络交换格式，便于跨框架使用
-3. **TorchScript格式（.pt）** - PyTorch的序列化格式，可独立于Python运行
-4. **NCNN格式（.param/.bin）** - 轻量级推理框架格式，适合移动设备
+# 示例
+python deploy/python_inference.py deploy/models/tinyconvnet_model.param \
+                               deploy/models/tinyconvnet_model.bin \
+                               data/images/test/cat/1.png \
+                               outputs/class_names.txt
+```
 
-转换过程中可能遇到以下问题及解决方案：
+参数说明:
+- `param_path`: NCNN 参数文件路径
+- `bin_path`: NCNN 二进制权重文件路径  
+- `imagepath`: 要推理的图像路径
+- `class_names_path`: 类别名称文件路径（可选）
 
-- **模块导入错误**：使用`export_simpler_model.py`导出简化模型
-- **序列化问题**：尝试仅保存模型的state_dict而非整个模型
-- **格式兼容性**：使用TorchScript格式作为PNNX转换的输入
+推理脚本会自动进行图像预处理并输出前 5 个预测结果及其置信度。
 
-## 注意事项
+<!-- ### C++ 推理
 
-1. **NCNN转换**: 需要安装`pnnx`工具，这是NCNN项目的一部分，用于模型转换
-2. **GPU训练**: 代码会自动检测是否有GPU可用，如果有则使用GPU加速训练
-3. **自定义数据集**: 如需使用自定义数据集，请按照与CIFAR10类似的方式组织数据目录结构
-4. **模型选择**: 对于极度资源受限的设备，推荐使用TinyConvNet或MicroNet自定义模型
-5. **精度与大小权衡**: 自定义模型优先考虑大小，可能会牺牲一些精度
-6. **模型保存格式**: 新版训练脚本保存模型时会包含元数据，便于转换工具正确识别模型类型
+对于需要更高性能或集成到其它系统的场景，项目也提供了 C++ 推理实现，详见 `deploy/cpp_inference/` 目录。 -->
 
 ## 后续计划
 
